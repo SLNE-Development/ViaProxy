@@ -1,0 +1,47 @@
+diff --git a/src/main/java/net/raphimc/viaproxy/proxy/session/ProxyConnection.java b/src/main/java/net/raphimc/viaproxy/proxy/session/ProxyConnection.java
+--- a/src/main/java/net/raphimc/viaproxy/proxy/session/ProxyConnection.java
++++ b/src/main/java/net/raphimc/viaproxy/proxy/session/ProxyConnection.java
+@@ -51,6 +51,7 @@ import java.security.Key;
+ import java.util.ArrayList;
+ import java.util.List;
++import java.util.UUID;
+ 
+ public class ProxyConnection extends NetClient {
+@@ -66,6 +67,7 @@ public class ProxyConnection extends NetClient {
+     private ProtocolVersion clientVersion;
+ 
+     private HostAndPort clientHandshakeAddress;
++    private UUID frontendProfileId;
+     private GameProfile gameProfile;
+     private C2SLoginHelloPacket loginHelloPacket;
+     private Key storedSecretKey;
+@@ -133,6 +135,14 @@ public class ProxyConnection extends NetClient {
+        this.clientHandshakeAddress = clientHandshakeAddress;
+    }
+ 
++    public UUID getFrontendProfileId() {
++        return this.frontendProfileId;
++    }
++
++    public void setFrontendProfileId(final UUID frontendProfileId) {
++        this.frontendProfileId = frontendProfileId;
++    }
++
+    public GameProfile getGameProfile() {
+        return this.gameProfile;
+    }
+diff --git a/src/main/java/net/raphimc/viaproxy/proxy/packethandler/LoginPacketHandler.java b/src/main/java/net/raphimc/viaproxy/proxy/packethandler/LoginPacketHandler.java
+--- a/src/main/java/net/raphimc/viaproxy/proxy/packethandler/LoginPacketHandler.java
++++ b/src/main/java/net/raphimc/viaproxy/proxy/packethandler/LoginPacketHandler.java
+@@ -83,6 +83,11 @@ public class LoginPacketHandler extends PacketHandler {
+            }
+ 
+            proxyConnection.setLoginHelloPacket(loginHelloPacket);
++            proxyConnection.setFrontendProfileId(
++                    loginHelloPacket.uuid != null
++                            ? loginHelloPacket.uuid
++                            : GameProfileUtil.getOfflinePlayerUuid(loginHelloPacket.name)
++            );
+            if (loginHelloPacket.uuid != null) {
+                proxyConnection.setGameProfile(new GameProfile(loginHelloPacket.uuid, loginHelloPacket.name));
+            } else {

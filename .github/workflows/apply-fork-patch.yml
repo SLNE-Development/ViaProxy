@@ -1,0 +1,28 @@
+name: Apply Fork Patch
+
+on:
+  push:
+    branches: [fork-patches]
+    paths:
+      - .github/patches/frontend-identity.patch
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fork-patches
+          fetch-depth: 0
+      - name: Apply patch
+        run: git apply --check .github/patches/frontend-identity.patch && git apply .github/patches/frontend-identity.patch
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main/java/net/raphimc/viaproxy/proxy/session/ProxyConnection.java src/main/java/net/raphimc/viaproxy/proxy/packethandler/LoginPacketHandler.java
+          git commit -m "preserve frontend profile identity"
+          git push origin HEAD:fork-patches
