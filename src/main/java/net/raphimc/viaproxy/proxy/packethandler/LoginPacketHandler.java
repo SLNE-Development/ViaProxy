@@ -83,6 +83,11 @@ public class LoginPacketHandler extends PacketHandler {
             }
 
             proxyConnection.setLoginHelloPacket(loginHelloPacket);
+            proxyConnection.setFrontendProfileId(
+                    loginHelloPacket.uuid != null
+                            ? loginHelloPacket.uuid
+                            : GameProfileUtil.getOfflinePlayerUuid(loginHelloPacket.name)
+            );
             if (loginHelloPacket.uuid != null) {
                 proxyConnection.setGameProfile(new GameProfile(loginHelloPacket.uuid, loginHelloPacket.name));
             } else {

@@ -48,6 +48,7 @@ import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class ProxyConnection extends NetClient {
 
@@ -62,6 +63,7 @@ public class ProxyConnection extends NetClient {
     private ProtocolVersion clientVersion;
 
     private HostAndPort clientHandshakeAddress;
+    private UUID frontendProfileId;
     private GameProfile gameProfile;
     private C2SLoginHelloPacket loginHelloPacket;
     private Key storedSecretKey;
@@ -144,6 +146,14 @@ public class ProxyConnection extends NetClient {
 
     public void setClientHandshakeAddress(final HostAndPort clientHandshakeAddress) {
         this.clientHandshakeAddress = clientHandshakeAddress;
+    }
+
+    public UUID getFrontendProfileId() {
+        return this.frontendProfileId;
+    }
+
+    public void setFrontendProfileId(final UUID frontendProfileId) {
+        this.frontendProfileId = frontendProfileId;
     }
 
     public GameProfile getGameProfile() {
