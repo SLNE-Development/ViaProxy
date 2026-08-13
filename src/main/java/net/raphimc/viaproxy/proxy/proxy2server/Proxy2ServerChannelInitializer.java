@@ -18,6 +18,7 @@
 package net.raphimc.viaproxy.proxy.proxy2server;
 
 import com.viaversion.viaversion.api.connection.UserConnection;
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.viaversion.viaversion.platform.ViaChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -41,6 +42,7 @@ import net.raphimc.viaproxy.ViaProxy;
 import net.raphimc.viaproxy.plugins.events.Proxy2ServerChannelInitializeEvent;
 import net.raphimc.viaproxy.plugins.events.types.ITyped;
 import net.raphimc.viaproxy.protocoltranslator.impl.ViaProxyViaCodec;
+import net.raphimc.viaproxy.proxy.chat.BackendChatSigningHandler;
 import net.raphimc.viaproxy.proxy.session.ProxyConnection;
 import net.raphimc.viaproxy.util.NetherNetInetSocketAddress;
 
@@ -79,6 +81,14 @@ public class Proxy2ServerChannelInitializer extends MinecraftChannelInitializer 
         proxyConnection.setUserConnection(user);
 
         channel.pipeline().addBefore(MCPipeline.PACKET_CODEC_HANDLER_NAME, ViaProxyViaCodec.NAME, new ViaProxyViaCodec(user));
+        if (!proxyConnection.getServerVersion().equals(BedrockProtocolVersion.bedrockLatest)
+                && proxyConnection.getClientVersion().newerThanOrEqualTo(ProtocolVersion.v1_19_3)
+                && proxyConnection.getServerVersion().newerThanOrEqualTo(ProtocolVersion.v1_19_3)) {
+            // Outbound handlers are traversed in reverse pipeline order. Placing this before
+            // ViaProxyViaCodec makes it see packets after ViaVersion translated them to the
+            // backend protocol, so cross-version chat is signed in the target packet format.
+            channel.pipeline().addBefore(ViaProxyViaCodec.NAME, BackendChatSigningHandler.NAME, new BackendChatSigningHandler(proxyConnection));
+        }
         channel.pipeline().addAfter(ViaProxyViaCodec.NAME, "via-" + MCPipeline.FLOW_CONTROL_HANDLER_NAME, new NoReadFlowControlHandler());
         if (proxyConnection.getServerVersion().olderThanOrEqualTo(LegacyProtocolVersion.r1_6_4)) {
             channel.pipeline().addBefore(MCPipeline.SIZER_HANDLER_NAME, PreNettyLengthCodec.NAME, new PreNettyLengthCodec(user));
