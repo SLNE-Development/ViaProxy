@@ -45,3 +45,4 @@ diff --git a/src/main/java/net/raphimc/viaproxy/proxy/packethandler/LoginPacketH
             if (loginHelloPacket.uuid != null) {
                 proxyConnection.setGameProfile(new GameProfile(loginHelloPacket.uuid, loginHelloPacket.name));
             } else {
+
