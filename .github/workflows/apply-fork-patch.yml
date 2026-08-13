@@ -4,7 +4,7 @@ on:
   push:
     branches: [fork-patches]
     paths:
-      - .github/patches/frontend-identity.patch
+      - .github/patches/apply_frontend_identity.py
 
 permissions:
   contents: write
@@ -17,8 +17,8 @@ jobs:
         with:
           ref: fork-patches
           fetch-depth: 0
-      - name: Apply patch
-        run: git apply --check .github/patches/frontend-identity.patch && git apply .github/patches/frontend-identity.patch
+      - name: Apply source transformation
+        run: python3 .github/patches/apply_frontend_identity.py
       - name: Commit patch
         run: |
           git config user.name "github-actions[bot]"
