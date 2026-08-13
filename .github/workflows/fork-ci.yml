@@ -25,6 +25,8 @@ jobs:
           distribution: temurin
           java-version: 25
           check-latest: true
+      - name: Validate Pterodactyl egg
+        run: python3 pterodactyl/test_egg.py
       - name: Test fork changes
         run: ./gradlew -I .github/fork-tests.gradle test --stacktrace
       - name: Build
