@@ -1,0 +1,31 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED FOR PTERODACTYL PANEL IMPORT",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-08-14T00:26:00+02:00",
+    "name": "ViaProxy",
+    "author": "support@pterodactyl.io",
+    "description": "SLNE ViaProxy build. Install/reinstall fetches the latest published build from SLNE-Development/ViaProxy. No runtime auto-update.",
+    "features": null,
+    "docker_images": {
+        "Java 25": "ghcr.io/pterodactyl/yolks:java_25"
+    },
+    "file_denylist": [],
+    "startup": "java -Xms128M -XX:MaxRAMPercentage=95.0 -DskipUpdateCheck=true -jar ViaProxy.jar config viaproxy.yml",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\":\"Binding proxy server to \"}",
+        "logs": "{}",
+        "stop": "stop"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\nset -euo pipefail\n\napt-get update\napt-get install -y --no-install-recommends curl jq ca-certificates\nmkdir -p /mnt/server\ncd /mnt/server\n\nTMP_JAR=\"/mnt/server/ViaProxy.jar.tmp\"\nFINAL_JAR=\"/mnt/server/ViaProxy.jar\"\nrm -f \"${TMP_JAR}\"\ntrap 'rm -f \"${TMP_JAR}\"' EXIT\n\nif ! RELEASE_JSON=\"$(curl -fsSL --retry 3 --retry-delay 2 https://api.github.com/repos/SLNE-Development/ViaProxy/releases/latest)\"; then\n  echo \"Could not resolve the latest SLNE ViaProxy GitHub release.\" >&2\n  exit 64\nfi\n\nDOWNLOAD_URL=\"$(printf '%s' \"${RELEASE_JSON}\" | jq -r '[.assets[] | select(.name == \"ViaProxy.jar\") | .browser_download_url][0] // empty')\"\nif [ -z \"${DOWNLOAD_URL}\" ]; then\n  echo \"Latest SLNE ViaProxy release does not contain ViaProxy.jar.\" >&2\n  exit 65\nfi\n\nif ! curl -fL --retry 3 --retry-delay 2 \"${DOWNLOAD_URL}\" -o \"${TMP_JAR}\"; then\n  echo \"Failed to download ViaProxy.jar from the latest SLNE release.\" >&2\n  exit 66\nfi\nif [ ! -s \"${TMP_JAR}\" ]; then\n  echo \"Downloaded ViaProxy JAR is missing or empty.\" >&2\n  exit 67\nfi\n\nmv -f \"${TMP_JAR}\" \"${FINAL_JAR}\"\ntrap - EXIT\necho \"Installed latest SLNE ViaProxy release as ${FINAL_JAR}.\"\n",
+            "container": "ghcr.io/pterodactyl/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": []
+}
