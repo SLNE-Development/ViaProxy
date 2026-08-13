@@ -1,0 +1,94 @@
+name: Fork Release
+
+on:
+  push:
+    branches: [fork-patches]
+  pull_request:
+    branches: [fork-patches]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+        with:
+          cache-disabled: true
+      - name: Set up Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: 25
+          check-latest: true
+      - name: Validate Pterodactyl egg
+        run: python3 pterodactyl/test_egg.py
+      - name: Build and test
+        run: ./gradlew -I .github/fork-tests.gradle build --stacktrace
+      - name: Prepare runtime artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t jars < <(
+            find build/libs -maxdepth 1 -type f -name '*.jar' \
+              ! -name '*+java8.jar' \
+              ! -name '*-javadoc.jar' \
+              ! -name '*-sources.jar' \
+              -print
+          )
+          if [ "${#jars[@]}" -ne 1 ]; then
+            echo "Expected exactly one runtime JAR, found ${#jars[@]}:" >&2
+            printf '  %s\n' "${jars[@]}" >&2
+            exit 1
+          fi
+          cp "${jars[0]}" ViaProxy.jar
+          test -s ViaProxy.jar
+      - name: Upload release runtime
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-runtime
+          path: ViaProxy.jar
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: build
+    if: ${{ github.ref == 'refs/heads/fork-patches' && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download release runtime
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-runtime
+          path: release
+      - name: Verify release runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s release/ViaProxy.jar
+          test "$(find release -maxdepth 1 -type f | wc -l)" -eq 1
+      - name: Publish immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="build-${GITHUB_RUN_NUMBER}"
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists; refusing to overwrite." >&2
+            exit 1
+          fi
+          gh release create "${TAG}" release/ViaProxy.jar \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "ViaProxy Build #${GITHUB_RUN_NUMBER}" \
+            --notes "Automated SLNE ViaProxy build from fork-patches at ${GITHUB_SHA}." \
+            --latest
