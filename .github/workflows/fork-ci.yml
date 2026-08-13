@@ -28,4 +28,4 @@ jobs:
       - name: Test fork changes
         run: ./gradlew -I .github/fork-tests.gradle test --stacktrace
       - name: Build
-        run: ./gradlew build --stacktrace
+        run: ./gradlew -I .github/fork-tests.gradle build --stacktrace
