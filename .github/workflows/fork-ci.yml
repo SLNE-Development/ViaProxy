@@ -1,0 +1,31 @@
+name: Fork CI
+
+on:
+  push:
+    branches: [fork-patches]
+  pull_request:
+    branches: [fork-patches]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+        with:
+          cache-disabled: true
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: 25
+          check-latest: true
+      - name: Test fork changes
+        run: ./gradlew -I .github/fork-tests.gradle test --stacktrace
+      - name: Build
+        run: ./gradlew build --stacktrace
