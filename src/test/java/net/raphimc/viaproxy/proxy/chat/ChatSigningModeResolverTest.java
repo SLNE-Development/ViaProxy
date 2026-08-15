@@ -1,7 +1,9 @@
 package net.raphimc.viaproxy.proxy.chat;
 
 import org.junit.jupiter.api.Test;
+
 import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ChatSigningModeResolverTest {
@@ -9,29 +11,20 @@ class ChatSigningModeResolverTest {
     void resolvesModes() {
         UUID a = UUID.randomUUID();
         UUID b = UUID.randomUUID();
-        assertEquals(ChatSigningMode.PASSTHROUGH, ChatSigningModeResolver.resolve(true, true, a, a, true, true));
-        assertEquals(ChatSigningMode.RESIGN, ChatSigningModeResolver.resolve(true, false, a, b, true, true));
-        assertEquals(ChatSigningMode.RESIGN, ChatSigningModeResolver.resolve(true, true, a, b, true, true));
-        assertEquals(ChatSigningMode.UPSTREAM, ChatSigningModeResolver.resolve(false, false, a, a, true, true));
+
+        assertEquals(ChatSigningMode.PASSTHROUGH, ChatSigningModeResolver.resolve(true, a, a, true, true));
+        assertEquals(ChatSigningMode.RESIGN, ChatSigningModeResolver.resolve(true, a, b, true, true));
+        assertEquals(ChatSigningMode.UPSTREAM, ChatSigningModeResolver.resolve(false, a, a, true, true));
+        assertEquals(ChatSigningMode.UPSTREAM, ChatSigningModeResolver.resolve(true, a, b, true, false));
     }
 
     @Test
-    void sameProtocolSameIdentityPassesThroughWithoutProxyChatSession() {
+    void sameIdentityPassesThroughWithoutProxyChatSession() {
         UUID profileId = UUID.randomUUID();
 
         assertEquals(
                 ChatSigningMode.PASSTHROUGH,
-                ChatSigningModeResolver.resolve(true, true, profileId, profileId, true, false)
-        );
-    }
-
-    @Test
-    void crossProtocolSameIdentityPassesThroughWithoutProxyChatSession() {
-        UUID profileId = UUID.randomUUID();
-
-        assertEquals(
-                ChatSigningMode.PASSTHROUGH,
-                ChatSigningModeResolver.resolve(true, false, profileId, profileId, true, false)
+                ChatSigningModeResolver.resolve(true, profileId, profileId, true, false)
         );
     }
 }
