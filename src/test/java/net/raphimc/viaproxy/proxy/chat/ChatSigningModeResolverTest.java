@@ -14,4 +14,14 @@ class ChatSigningModeResolverTest {
         assertEquals(ChatSigningMode.RESIGN, ChatSigningModeResolver.resolve(true, true, a, b, true, true));
         assertEquals(ChatSigningMode.UPSTREAM, ChatSigningModeResolver.resolve(false, false, a, a, true, true));
     }
+
+    @Test
+    void sameProtocolSameIdentityPassesThroughWithoutProxyChatSession() {
+        UUID profileId = UUID.randomUUID();
+
+        assertEquals(
+                ChatSigningMode.PASSTHROUGH,
+                ChatSigningModeResolver.resolve(true, true, profileId, profileId, true, false)
+        );
+    }
 }
