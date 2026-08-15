@@ -29,6 +29,7 @@ import net.raphimc.viaproxy.proxy.chat.BackendChatSigningHandler;
 import net.raphimc.viaproxy.proxy.chat.ChatSigningMode;
 import net.raphimc.viaproxy.proxy.chat.ChatSigningModeResolver;
 import net.raphimc.viaproxy.proxy.session.ProxyConnection;
+import net.raphimc.viaproxy.util.logging.Logger;
 
 import java.util.BitSet;
 import java.util.List;
@@ -54,6 +55,15 @@ public class ChatSignaturePacketHandler extends PacketHandler {
 
         final UserConnection user = this.proxyConnection.getUserConnection();
         final ChatSigningMode mode = ChatSigningModeResolver.resolve(this.proxyConnection);
+
+        if (unknownPacket.packetId == this.chatSessionUpdateId || unknownPacket.packetId == this.chatMessageId) {
+            this.logDecision(
+                    "C2P " + (unknownPacket.packetId == this.chatSessionUpdateId ? "CHAT_SESSION_UPDATE" : "CHAT")
+                            + " mode=" + mode
+                            + " action=" + this.c2pAction(mode, unknownPacket.packetId),
+                    user
+            );
+        }
 
         if (mode == ChatSigningMode.PASSTHROUGH) {
             return true;
@@ -101,6 +111,13 @@ public class ChatSignaturePacketHandler extends PacketHandler {
 
         final UserConnection user = this.proxyConnection.getUserConnection();
         final ChatSigningMode mode = ChatSigningModeResolver.resolve(this.proxyConnection);
+        if (unknownPacket.packetId == this.joinGameId) {
+            this.logDecision(
+                    "P2S JOIN_GAME mode=" + mode
+                            + " action=" + (mode == ChatSigningMode.PASSTHROUGH ? "NO_PROXY_SESSION_UPDATE" : "PROXY_SESSION_UPDATE_IF_ENCRYPTED"),
+                    user
+            );
+        }
         if (mode == ChatSigningMode.PASSTHROUGH) {
             return true;
         }
@@ -129,6 +146,30 @@ public class ChatSignaturePacketHandler extends PacketHandler {
         }
 
         return true;
+    }
+
+    private String c2pAction(final ChatSigningMode mode, final int packetId) {
+        if (mode == ChatSigningMode.PASSTHROUGH) {
+            return "FORWARD_CLIENT_PACKET";
+        }
+        if (mode == ChatSigningMode.RESIGN) {
+            return packetId == this.chatSessionUpdateId ? "DROP_CLIENT_SESSION_UPDATE" : "FORWARD_TO_TRANSLATOR";
+        }
+        return "UPSTREAM_BEHAVIOR";
+    }
+
+    private void logDecision(final String event, final UserConnection user) {
+        Logger.u_info(
+                "chat signing",
+                this.proxyConnection,
+                event
+                        + " client=" + this.proxyConnection.getClientVersion().getName()
+                        + " server=" + this.proxyConnection.getServerVersion().getName()
+                        + " frontendUuid=" + this.proxyConnection.getFrontendProfileId()
+                        + " backendUuid=" + (this.proxyConnection.getGameProfile() != null ? this.proxyConnection.getGameProfile().getId() : null)
+                        + " proxyChatSession=" + (user != null && user.has(ChatSession1_19_3.class))
+                        + " p2sEncrypted=" + this.isP2sEncrypted()
+        );
     }
 
     private boolean isP2sEncrypted() {
