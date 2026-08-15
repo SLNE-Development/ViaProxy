@@ -1,60 +1,39 @@
 # ViaProxy fork-patches design
 
 Date: 2026-08-13
+Updated: 2026-08-15
 Repository: `SLNE-Development/ViaProxy`
 Branch: `fork-patches`
 
 ## Goals
 
-Maintain an upstream-friendly `main` branch while keeping SLNE-specific changes on `fork-patches`.
+Maintain an upstream-friendly `main` branch while keeping SLNE-specific runtime changes on `fork-patches`.
 
-The fork branch must provide:
+The fork branch provides:
 
-1. Automatic Java 25 builds on pushes to `fork-patches`.
-2. A new immutable GitHub release for every successful publish run, tagged `build-<github.run_number>` and containing exactly one runtime asset named `ViaProxy.jar`.
-3. A Pterodactyl egg stored in the repository that installs the newest published `ViaProxy.jar` from GitHub Releases.
-4. A signed-chat fix for Java clients and Java backend targets from Minecraft 1.19.3 onward, including cross-version connections such as 1.19.3 client -> 26.2 backend.
-5. No Docker publishing in the SLNE workflow.
+1. Java 25 build and test validation for `fork-patches`.
+2. A new GitHub release for every successful publish run, tagged `build-<github.run_number>` and containing the runtime asset `ViaProxy.jar`.
+3. A repository-owned Pterodactyl egg that installs the latest published `ViaProxy.jar`.
+4. Signed-chat preservation for Java client/backend versions from Minecraft 1.19.3 onward.
+5. No additional SLNE Docker publishing path.
 
 ## Branch strategy
 
-`main` stays as close as practical to upstream ViaProxy and is not used for SLNE-specific runtime changes.
+`main` stays as close as practical to upstream ViaProxy. `fork-patches` is the SLNE distribution branch.
 
-`fork-patches` is the SLNE distribution branch and is intended to become the repository default branch after the work is complete.
-
-Future upstream updates should first be synchronized into `main`, then merged or rebased into `fork-patches`. Fork-specific files and behavior live only on `fork-patches` unless an upstream contribution is intentionally prepared later.
+Future upstream updates should first be synchronized into `main`, then merged or rebased into `fork-patches`. Fork-specific behavior and files remain on `fork-patches`.
 
 ## Build and release publishing
 
-### Build trigger
+The fork workflows use the repository Gradle wrapper with Java 25. Tests and the project build must succeed before a release is published.
 
-A dedicated GitHub Actions workflow on `fork-patches` runs on:
-
-- pushes to `fork-patches`
-- manual `workflow_dispatch`
-- pull requests targeting `fork-patches` for validation only
-
-Release creation happens only for successful push or explicitly allowed manual runs on `fork-patches`; pull requests never publish releases.
-
-### Build environment
-
-Use the repository Gradle wrapper and Java 25. The existing project build remains authoritative:
-
-```bash
-./gradlew build --stacktrace
-```
-
-ViaProxy currently also produces a Java 8 downgraded artifact. The release workflow must explicitly select the normal Java 25 runtime JAR and must not accidentally publish a `+java8` artifact.
-
-Before publishing, copy or rename the selected artifact to the stable asset name:
+The release workflow selects the normal runtime JAR from `build/libs`, excluding the `+java8`, sources and javadoc artifacts, then publishes it as:
 
 ```text
 ViaProxy.jar
 ```
 
-### Release numbering
-
-Each successful publish run creates a new GitHub release:
+Each successful publish run creates:
 
 ```text
 Tag: build-<github.run_number>
@@ -62,20 +41,7 @@ Title: ViaProxy Build #<github.run_number>
 Asset: ViaProxy.jar
 ```
 
-The release body includes at least:
-
-- full commit SHA
-- short commit SHA
-- source branch
-- link or reference to the GitHub Actions run where practical
-
-`github.run_number` is used only as a monotonically increasing build identifier for this workflow, not as a semantic upstream version.
-
-A workflow rerun keeps the same `github.run_number`; publishing logic must therefore avoid silently replacing a previously published build tag. If the tag already exists, the publish step must fail clearly rather than mutate the immutable release.
-
-### Latest release behavior
-
-Every published `build-N` is a normal non-draft, non-prerelease GitHub release so GitHub's `releases/latest` endpoint resolves to the newest successful build. The Pterodactyl installer depends on this behavior.
+Published builds are normal non-draft, non-prerelease releases so GitHub's latest-release endpoint resolves to the newest successful build.
 
 ## Pterodactyl egg
 
@@ -86,34 +52,9 @@ pterodactyl/egg-viaproxy.json
 pterodactyl/README.md
 ```
 
-The egg has no stable/dev channel selector. Installation and reinstallation always install the latest published SLNE build.
+The egg has no stable/dev selector. Installation and reinstallation fetch the latest release from `SLNE-Development/ViaProxy`, download the asset named exactly `ViaProxy.jar` to a temporary file, and atomically replace the runtime JAR.
 
-### Installer
-
-The installer resolves the latest GitHub release for:
-
-```text
-SLNE-Development/ViaProxy
-```
-
-It locates the release asset named exactly `ViaProxy.jar`, downloads it to a temporary path, validates that the download succeeded and is non-empty, then atomically replaces the runtime file:
-
-```text
-ViaProxy.jar.tmp -> ViaProxy.jar
-```
-
-The installer must fail with a useful error if:
-
-- GitHub has no published release yet
-- `ViaProxy.jar` is missing from the latest release
-- download fails
-- the resulting file is empty
-
-No Jenkins dependency and no development/stable selector are used.
-
-### Runtime
-
-Use Java 25 and the startup command:
+Runtime command:
 
 ```bash
 java -Xms128M -XX:MaxRAMPercentage=95.0 -DskipUpdateCheck=true -jar ViaProxy.jar config viaproxy.yml
@@ -131,144 +72,82 @@ Stop command:
 stop
 ```
 
-A running Pterodactyl server is not auto-updated when a new GitHub build appears. Reinstalling the server fetches the newest published `build-N` release.
-
-The repository README for the egg documents import, installation, required Java image, update behavior, and the fact that releases are generated from `fork-patches`.
+A running server is not updated automatically. Reinstalling fetches the newest published build.
 
 ## Signed-chat support
 
 ### Supported scope
 
-The fork-specific signed-chat bridge applies when both endpoints are Java protocol versions at or above Minecraft 1.19.3 and `chat-signing` is enabled with a usable Microsoft account.
+Fork-specific handling applies when both Java protocol versions are Minecraft 1.19.3 or newer and `chat-signing` is enabled.
 
-Required supported examples include:
+Versions below 1.19.3 keep upstream behavior.
 
-```text
-1.19.3 -> 26.2
-1.20.x -> 26.2
-1.21.x -> 26.2
-26.2 -> 26.2
-26.2 -> older >=1.19.3 target
-```
+### Root cause found during live testing
 
-Versions older than 1.19.3 are outside the new fork guarantee and retain upstream behavior.
-
-### Problem in current behavior
-
-ViaProxy currently creates its own `ChatSession1_19_3`, drops an incoming client `CHAT_SESSION_UPDATE` in the encrypted/backend-authenticated path, rewrites chat messages using its own chat session, and injects a proxy-generated `CHAT_SESSION_UPDATE` after Join Game.
-
-This mechanism failed for the tested 26.2 -> 26.2 path: the downstream server reported a secure-chat state update failure and the player received `Chat disabled due to missing profile public key`. A diagnostic same-version patch that stopped replacing the client session restored working signed chat, proving that the proxy-side session replacement path is involved.
-
-### Design principle
-
-Signed chat is treated as a bridge with two operating modes:
-
-#### Transparent mode
-
-When the client and target protocol are identical and the client's signed-chat session can be passed through safely, ViaProxy should preserve the original client chat session and signatures instead of replacing them.
-
-For this mode:
-
-- do not drop the client's `CHAT_SESSION_UPDATE`
-- do not inject a ViaProxy replacement chat session
-- do not re-sign the client's already valid chat packet
-
-This includes the already validated 26.2 -> 26.2 case and should work for equal versions >=1.19.3 where the packet model matches.
-
-#### Bridged re-sign mode
-
-When client and target protocol versions differ but both are >=1.19.3, ViaVersion remains responsible for protocol translation while ViaProxy is responsible for establishing a valid backend-side chat session and signing the backend-format message.
-
-Conceptual flow:
+The original ViaProxy handler could discard the real client `CHAT_SESSION_UPDATE` when the backend connection itself was not encrypted. In the reproduced `26.2 -> 26.2` topology, the frontend and backend UUIDs were identical, but no ViaProxy-owned `ChatSession1_19_3` existed and `p2sEncrypted` was false. Falling back to the upstream handler therefore removed the client's valid signing session and produced:
 
 ```text
-client signed-chat packet
-  -> ViaVersion translation
-  -> backend-format chat packet
-  -> ViaProxy backend-side signing bridge
-  -> target server
+Chat disabled due to missing profile public key
+Failed to update secure chat state
 ```
 
-The signature must be calculated for the target/backend protocol representation, not by blindly interpreting the original client packet layout as if it were the target layout.
+The fix is to prefer the real client signing session whenever the identity presented on both sides is the same.
 
-### Identity and credentials
+### Mode selection
 
-Cross-version re-signing uses the configured Microsoft account and its current Mojang/Minecraft player certificate, private key, profile UUID, and backend authentication token.
+The fork keeps three modes:
 
-The backend-side chat session must correspond to the same profile identity ViaProxy authenticates as toward the target server. The implementation must never combine a chat certificate from profile A with a backend login identity for profile B.
+#### PASSTHROUGH
 
-Transparent passthrough is only valid when preserving the client session does not create an identity mismatch with the identity presented to the backend. If identity cannot be proven compatible, ViaProxy must use bridged re-sign mode rather than unsafe passthrough.
+Used when:
 
-No private keys, access tokens, or sensitive certificate material may be logged.
+- both endpoints are >= 1.19.3,
+- chat signing is enabled,
+- the original frontend UUID equals the backend profile UUID.
 
-### Implementation boundary
+This does not require a ViaProxy-owned `ChatSession1_19_3`.
 
-The existing `ChatSignaturePacketHandler` may be refactored or split, but the design should keep three responsibilities explicit:
+Behavior:
 
-1. Decide whether this connection uses transparent passthrough or backend re-signing.
-2. Manage the backend chat session update only when re-signing is required.
-3. Sign the target-format chat message after translation, using the target protocol's packet layout and acknowledgement/checksum requirements.
+- forward the client's `CHAT_SESSION_UPDATE`,
+- forward the client's signed chat packet into ViaVersion/ViaBackwards,
+- do not inject a replacement session,
+- do not re-sign the packet in ViaProxy.
 
-The solution must avoid hardcoding 26.2-specific packet IDs. Packet IDs and structures should continue to come from ViaVersion/netminecraft protocol abstractions where available.
+This is the live-verified path for `26.2 -> 26.2`. The same rule intentionally also applies across >=1.19.3 protocol versions when the identity remains the same. The cross-version case is covered by mode-selection tests but was not separately live-tested after the final fix at the user's request.
 
-### Failure behavior
+#### RESIGN
 
-If `chat-signing: true` is requested but ViaProxy cannot obtain a valid certificate/session required for backend re-signing, the failure should be explicit in logs without exposing secrets. It must not silently claim secure chat is active while sending malformed signing state.
+Used only as a fallback when both endpoints are >=1.19.3, chat signing is enabled, the identities differ, and ViaProxy has its own usable `ChatSession1_19_3`.
 
-Existing behavior for configurations without chat signing should remain unchanged.
+ViaVersion/ViaBackwards performs protocol translation. ViaProxy's backend signing handler then signs the target-format chat packet and can send the matching backend session update.
+
+#### UPSTREAM
+
+Used outside the fork guarantee, when chat signing is disabled, or when an identity-changing connection does not have the ViaProxy-owned signing material required for the RESIGN fallback.
+
+### Identity handling
+
+ViaProxy stores the original frontend profile UUID before a configured account or backend login can replace `gameProfile`. Mode selection compares that preserved frontend UUID with the backend profile UUID.
+
+No private keys, access tokens or certificate material are logged.
 
 ## Testing
 
-### Build and publishing tests
+CI covers:
 
-Validate locally or in CI that:
+- mode selection, including same-identity passthrough without a proxy chat session,
+- identity preservation,
+- target-format backend signing fallback,
+- Pterodactyl egg validation,
+- full Gradle build,
+- runtime JAR selection and release publication.
 
-- `./gradlew build --stacktrace` succeeds on Java 25
-- the selected runtime JAR is the normal non-`+java8` artifact
-- the publish workflow does not run release creation on pull requests
-- release tags use `build-<run_number>`
-- duplicate tag publication fails rather than overwriting an old release
-
-### Egg tests
-
-Validate the egg JSON structure and installer script.
-
-Test installer behavior against:
-
-- latest release with valid `ViaProxy.jar`
-- missing asset
-- failed GitHub request/download
-
-Confirm the resulting runtime path is exactly `ViaProxy.jar` and startup configuration matches the expected CLI invocation.
-
-### Signed-chat tests
-
-At minimum cover logic/unit tests for mode selection and packet/session behavior for:
-
-```text
-1.19.3 -> 26.2      bridged re-sign
-1.20.x -> 26.2      bridged re-sign
-1.21.x -> 26.2      bridged re-sign
-26.2 -> 26.2        transparent passthrough
-26.2 -> >=1.19.3    bridged re-sign when versions differ
-<1.19.3 endpoint     existing/upstream behavior
-```
-
-Also verify:
-
-- transparent mode does not suppress client `CHAT_SESSION_UPDATE`
-- transparent mode does not inject a replacement session
-- re-sign mode does inject a valid backend-side session update when required
-- re-sign mode signs the translated target-format chat packet
-- configured backend account identity and signing certificate identity match
-- chat remains functional in the original reproduced topology: Minecraft client -> ViaProxy -> Velocity -> backend
-
-Where practical, retain a regression test for the specific secure-chat failure found with 26.2.
+The reproduced `26.2 -> 26.2` Velocity/Minestom topology was additionally verified live after the final passthrough fix.
 
 ## Non-goals
 
-- No Docker publishing workflow for the SLNE distribution.
+- No fork guarantee for signed chat below 1.19.3.
 - No automatic in-place update of running Pterodactyl servers.
-- No new signed-chat guarantee for client or target versions below 1.19.3.
-- No attempt to keep `main` as the SLNE runtime branch.
-- No semantic-version replacement for upstream ViaProxy versioning; `build-N` is a fork build identifier only.
+- No fork-specific Docker publishing workflow.
+- No semantic-version replacement for upstream ViaProxy versioning; `build-N` is only the fork build identifier.

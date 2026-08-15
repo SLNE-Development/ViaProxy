@@ -21,7 +21,6 @@ public final class ChatSigningModeResolver {
 
         return resolve(
                 supportedVersions,
-                connection.getClientVersion().equals(connection.getServerVersion()),
                 connection.getFrontendProfileId(),
                 backendProfileId,
                 ViaProxy.getConfig().shouldSignChat(),
@@ -31,7 +30,6 @@ public final class ChatSigningModeResolver {
 
     public static ChatSigningMode resolve(
             final boolean supportedVersions,
-            final boolean sameProtocol,
             final UUID frontendProfileId,
             final UUID backendProfileId,
             final boolean chatSigningEnabled,
