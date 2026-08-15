@@ -40,7 +40,7 @@ public final class ChatSigningModeResolver {
         if (!supportedVersions || !chatSigningEnabled) {
             return ChatSigningMode.UPSTREAM;
         }
-        if (sameProtocol && frontendProfileId != null && frontendProfileId.equals(backendProfileId)) {
+        if (frontendProfileId != null && frontendProfileId.equals(backendProfileId)) {
             return ChatSigningMode.PASSTHROUGH;
         }
         if (!hasProxyChatSession) {
