@@ -44,7 +44,7 @@ public class ViaProxyClassicMPPassProvider extends ClassicMPPassProvider {
                 final HttpClient httpClient = new HttpClient();
                 String externalIp;
                 try {
-                    externalIp = httpClient.execute(new GetRequest("https://checkip.amazonaws.com"), new ThrowingResponseHandler()).getContentAsString();
+                    externalIp = httpClient.execute(new GetRequest("https://checkip.amazonaws.com"), new ThrowingResponseHandler()).getContent().getAsString();
                 } catch (Throwable e) {
                     throw new RuntimeException("Failed to get external IP address!", e);
                 }
