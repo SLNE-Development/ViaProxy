@@ -27,14 +27,15 @@ class ViaProxyEggTest(unittest.TestCase):
         self.assertEqual([], egg["variables"])
         self.assertTrue(any("java_25" in image for image in egg["docker_images"].values()))
 
-    def test_installer_uses_latest_slne_release_and_exact_asset(self):
+    def test_installer_uses_latest_slne_release_asset(self):
         script = self.load_egg()["scripts"]["installation"]["script"]
         self.assertIn(
-            "https://api.github.com/repos/SLNE-Development/ViaProxy/releases/latest",
+            "https://github.com/SLNE-Development/ViaProxy/releases/latest/download/ViaProxy.jar",
             script,
         )
-        self.assertIn('select(.name == "ViaProxy.jar")', script)
-        self.assertIn("browser_download_url", script)
+        self.assertNotIn("api.github.com", script)
+        self.assertNotIn("jq", script)
+        self.assertNotIn("apt-get", script)
         self.assertNotIn("ci.viaversion.com", script)
         self.assertNotIn("VIAPROXY_CHANNEL", script)
 
