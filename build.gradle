@@ -32,6 +32,15 @@ repositories {
         }
     }
     maven {
+        name = "OpenCollab Snapshots"
+        url = "https://repo.opencollab.dev/maven-snapshots"
+
+        content {
+            includeGroupByRegex "org\\.cloudburstmc\\..+"
+            includeGroup "dev.opencollab"
+        }
+    }
+    maven {
         name = "Minecraft Libraries"
         url = "https://libraries.minecraft.net"
 
@@ -50,14 +59,14 @@ repositories {
 }
 
 dependencies {
-    includeInJar "com.viaversion:viaversion-common:5.12.0-SNAPSHOT"
-    includeInJar "com.viaversion:viabackwards-common:5.12.0-SNAPSHOT"
-    includeInJar "com.viaversion:viarewind-common:4.1.4-SNAPSHOT"
-    includeInJar "net.raphimc:ViaLegacy:3.0.17-SNAPSHOT"
-    includeInJar "com.viaversion:viaaprilfools-common:4.2.3-SNAPSHOT"
-    includeInJar "net.raphimc:ViaBedrock:0.0.29-SNAPSHOT"
+    includeInJar "com.viaversion:viaversion-common:5.12.1-SNAPSHOT"
+    includeInJar "com.viaversion:viabackwards-common:5.12.1-SNAPSHOT"
+    includeInJar "com.viaversion:viarewind-common:4.2.0"
+    includeInJar "net.raphimc:ViaLegacy:3.1.0"
+    includeInJar "com.viaversion:viaaprilfools-common:4.2.3"
+    includeInJar "net.raphimc:ViaBedrock:0.0.31-20260920.192303-2"
 
-    includeInJar "com.google.guava:guava:33.6.0-jre"
+    includeInJar "com.google.guava:guava:33.7.1-jre"
     includeInJar "com.google.code.gson:gson:2.14.0"
     includeInJar "com.formdev:flatlaf:3.7.2"
     includeInJar "com.formdev:flatlaf-extras:3.7.2"
@@ -66,7 +75,7 @@ dependencies {
     includeInJar "net.sf.jopt-simple:jopt-simple:5.0.4"
     includeInJar "org.apache.logging.log4j:log4j-core:2.26.1"
     includeInJar "org.apache.logging.log4j:log4j-slf4j2-impl:2.26.1"
-    includeInJar "org.jline:jansi:4.3.1"
+    includeInJar "org.jline:jansi:4.4.5"
     includeInJar("com.mojang:authlib:6.0.58") {
         exclude group: "org.slf4j", module: "slf4j-api"
     }
@@ -75,37 +84,36 @@ dependencies {
     includeInJar "net.lenni0451.classtransform:additionalclassprovider:1.15.1"
     includeInJar "net.lenni0451:Reflect:1.6.4"
     includeInJar "net.lenni0451:LambdaEvents:2.4.2"
-    includeInJar("net.lenni0451:MCPing:1.4.4") {
+    includeInJar("net.lenni0451:MCPing:1.4.5-20260920.192552-4") {
         exclude group: "com.google.code.gson", module: "gson"
     }
     includeInJar "net.lenni0451.commons:swing:1.9.2"
     includeInJar "net.lenni0451.commons:brigadier:1.9.2"
     includeInJar "net.lenni0451.commons:unchecked:1.9.2"
-    includeInJar("net.raphimc.netminecraft:all:3.1.6") {
+    includeInJar("net.raphimc.netminecraft:all:3.1.7") {
         exclude group: "com.google.code.gson", module: "gson"
     }
-    includeInJar("io.netty:netty-codec-haproxy:4.2.17.Final") {
+    includeInJar("io.netty:netty-codec-haproxy:4.2.18.Final") {
         transitive = false
     }
-    includeInJar("io.netty:netty-handler-proxy:4.2.17.Final") {
+    includeInJar("io.netty:netty-handler-proxy:4.2.18.Final") {
         transitive = false
     }
-    includeInJar("io.netty:netty-codec-socks:4.2.17.Final") {
+    includeInJar("io.netty:netty-codec-socks:4.2.18.Final") {
         transitive = false
     }
-    includeInJar("net.raphimc:MinecraftAuth:5.0.2") {
+    includeInJar("net.raphimc:MinecraftAuth:5.0.3-20260923.192703-2") {
         exclude group: "com.google.code.gson", module: "gson"
     }
-    includeInJar("dev.kastle.netty:netty-transport-raknet:1.7.3") {
+    includeInJar("org.cloudburstmc.netty:netty-transport-raknet:2.0.0.CR4-20260922.202324-5") {
         exclude group: "io.netty"
     }
-    includeInJar("dev.kastle.netty:netty-transport-nethernet:1.7.3") {
+    includeInJar("org.cloudburstmc.netty:netty-transport-nethernet:2.0.0.CR4-20260922.202324-5") {
         exclude group: "io.netty"
-        exclude group: "org.bitbucket.b_c", module: "jose4j"
+        exclude group: "org.bouncycastle"
+        exclude group: "dev.opencollab:libdatachannel-java"
     }
-    ["windows-x86_64", "windows-aarch64", "linux-x86_64", "linux-aarch64", "macos-x86_64", "macos-aarch64"].each {
-        includeInJar "dev.kastle.webrtc:webrtc-java:1.0.3:$it"
-    }
+    includeInJar "dev.opencollab:libdatachannel-java-arch-detect:0.24.5.0-20260921.140330-12"
     includeInJar "gs.mclo:api:6.2.1"
     includeInJar "net.lenni0451:optconfig:1.1.1"
 
